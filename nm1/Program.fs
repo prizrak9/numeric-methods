@@ -74,7 +74,7 @@ module GradientMethod =
             
         let rec inFunc current (step:Vector2) =
             // All derivatives are less than E
-            if grad |> List.forall (fun g -> g(current) < E)
+            if grad |> List.forall (fun g -> g(current) < E) || Vector2.sqrMagnitude step = 0. 
             then current
             else
                 let next = current + step
@@ -85,6 +85,7 @@ module GradientMethod =
 
         inFunc start step
 
+    // Convert values to vectors and call minGeneral
     let min E func grad start startStep =
         let func r = func r.x r.y
         
