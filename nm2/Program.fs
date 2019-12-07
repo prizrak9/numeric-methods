@@ -88,12 +88,6 @@ let ``is the number of machines used less than the total number of machines for 
 let ``is the number of products that can be produced more than the plan for each product type`` u j =
     let uij i = u |> List.item i |> List.item j
     let aij i = ``number of products 1 machine can produce for each machine type`` |> List.item i |> List.item j
-    let rrrr = [for i in 0 .. ``number of machine types`` - 1  -> uij i * aij i]
-    if rrrr |> List.sum > 0
-    then
-        let l =  ``plan of production for each product type``.[j]
-        ()
-
     [for i in 0 .. ``number of machine types`` - 1  -> uij i * aij i] |> List.sum >= ``plan of production for each product type``.[j]
 
 
@@ -105,7 +99,6 @@ let ``revenue from selling all produced products`` u =
                 let rj = ``revenue from selling one product for each product type`` |> List.item j
                 let aij = ``number of products 1 machine can produce for each machine type`` |> List.item i |> List.item j
                 uij * rj * aij
-                //(Array2D.get u i j) * (``revenue from selling one product for each product type`` |> List.item j) * (Array2D.get ``number of products 1 machine can produce for each machine type`` i j)
     ] |> List.sum
 
 type MachineMoving =
@@ -137,9 +130,7 @@ let ``all combinations of machine type and product type`` =
 
             Process newMachinePositions
 
-
-
-    let countMachinesForProductType machinePositions i =
+    let countMachinesForProductType machinePositions =
         let rec inFunc positionsLeft acc =
             match positionsLeft with
             | [] -> acc
@@ -159,7 +150,7 @@ let ``all combinations of machine type and product type`` =
         [
             for i in 0 .. ``number of machine types`` - 1 ->
                 allCombinations (Process (machinePositionsForProductType i)) []
-                |> List.map (fun a -> countMachinesForProductType a i)
+                |> List.map (fun a -> countMachinesForProductType a)
         ]
 
     // The number of combinations is insane. > 4e7
@@ -195,7 +186,7 @@ let acceptableConfigurations =
     }
 
 
-
+// Imperative but simple.
 let mutable max:int list list * int = [],0
 
 for u in acceptableConfigurations do
