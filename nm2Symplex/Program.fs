@@ -33,6 +33,28 @@ let inline chooseType t f1 f2 =
 let maybe f1 f2 condition =
     if condition then f1 else f2
 
+let gauss minr minc matrix =
+    [
+        for i in 0 .. Array2D.length1 matrix - 1 do
+            if i = minr
+            then 
+                yield 
+                    [for a in matrix.[i,0..] ->
+                        a / matrix.[minr, minc]]
+            else
+                yield 
+                    [for j in 0 .. Array2D.length2 matrix - 1 ->
+                        matrix.[i,j] + (matrix.[i,minc] / -matrix.[minr,minc]) * matrix.[minr,j]]
+    ]
+    |> array2D
+
+let ans (matrix:float [,]) basis =
+    let mergedBasis = List.zip (basis) (List.ofArray matrix.[1..,0])
+
+    List.init (Array2D.length2 matrix) (fun i -> 
+        match mergedBasis |> List.tryFind (fun (index,_) -> index - 1 = i) with None -> 0. | Some (_,value) -> value
+    )
+
 let rec iterate (matrix:float [,]) basis t =
     if matrix.[0,1..] |> Array.forall (chooseType t (<=) (>=) 0.)
     then matrix, basis
@@ -51,7 +73,9 @@ let rec iterate (matrix:float [,]) basis t =
             matrix.[1..,minc] 
 
             // MRT test
-            |> Array.mapi (fun i a -> i + 1, matrix.[i + 1,0] / a |> abs) 
+            |> Array.mapi (fun i a -> i + 1, a) 
+            |> Array.filter (fun (_,a) -> a > 0.)
+            |> Array.map (fun (i,a) -> i, matrix.[i,0] / a) 
             |> printF (Array.map snd)
 
             // Ignore Infinity ratios.
@@ -59,38 +83,18 @@ let rec iterate (matrix:float [,]) basis t =
             |> Array.minBy snd
             |> fst 
 
-        printfn "%A\n" (minc, minr)
-            
-
         let basis = List.replaceItem (minr - 1) minc basis
 
-        let matrix =
-            [
-                for i in 0 .. Array2D.length1 matrix - 1 do
-                    if i = minr
-                    then 
-                        yield 
-                            [for a in matrix.[i,0..] ->
-                                a / matrix.[minr, minc]]
-                    else
-                        yield 
-                            [for j in 0 .. Array2D.length2 matrix - 1 ->
-                                matrix.[i,j] + (matrix.[i,minc] / -matrix.[minr,minc]) * matrix.[minr,j]]
-            ]
-            |> array2D
+        printfn "%A\n%A\n" (ans matrix basis) (minc, minr)
+
+        let matrix = gauss minr minc matrix
            
         iterate matrix basis t
 
 let solve matrix t =
-    let basis =  List.init (Array2D.length1 matrix - 1) (fun a -> (Array2D.length2 matrix - Array2D.length1 matrix) + a)
+    let basis =  List.init (Array2D.length1 matrix - 1) (fun a -> (Array2D.length2 matrix - Array2D.length1 matrix) + a + 1)
     let matrix, basis = iterate (matrix) basis t
-    let ans (matrix:float [,]) basis =
-        let mergedBasis = List.zip (basis) (List.ofArray matrix.[1..,0])
-    
-        List.init (Array2D.length2 matrix - 1 - List.length basis) (fun i -> 
-            match mergedBasis |> List.tryFind (fun (index,_) -> index - 1 = i) with None -> 0. | Some (_,value) -> value
-        )
-    matrix, ans matrix basis
+    matrix, (ans matrix basis) |> List.take (basis |> List.length)
 
 
 
@@ -118,12 +122,12 @@ let matrix2 =
         [5;     1;      1;      1;      1;      1;      1;      0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      1; 0; 0; 0; 0; 0; 0; 0; 0] 
         [4;     0;      0;      0;      0;      0;      0;      1;      1;      1;      1;      1;      1;      0;      0;      0;      0;      0;      0;      0; 1; 0; 0; 0; 0; 0; 0; 0]
         [5;     0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      1;      1;      1;      1;      1;      1;      0; 0; 1; 0; 0; 0; 0; 0; 0] 
-        [-300;  300;    0;      0;      0;      0;      0;      200;    0;      0;      0;      0;      0;      100;    0;      0;      0;      0;      0;      0; 0; 0; 1; 0; 0; 0; 0; 0]
-        [-200;  0;      100;    0;      0;      0;      0;      0;      150;    0;      0;      0;      0;      0;      50;     0;      0;      0;      0;      0; 0; 0; 0; 1; 0; 0; 0; 0]
-        [-600;  0;      0;      350;    0;      0;      0;      0;      0;      200;    0;      0;      0;      0;      0;      100;    0;      0;      0;      0; 0; 0; 0; 0; 1; 0; 0; 0]
-        [-100;  0;      0;      0;      50;     0;      0;      0;      0;      0;      40;     0;      0;      0;      0;      0;      30;     0;      0;      0; 0; 0; 0; 0; 0; 1; 0; 0]
-        [-200;  0;      0;      0;      0;      150;    0;      0;      0;      0;      0;      100;    0;      0;      0;      0;      0;      200;    0;      0; 0; 0; 0; 0; 0; 0; 1; 0]
-        [-100;  0;      0;      0;      0;      0;      40;     0;      0;      0;      0;      0;      30;     0;      0;      0;      0;      0;      50;     0; 0; 0; 0; 0; 0; 0; 0; 1]
+        [300;   300;    0;      0;      0;      0;      0;      200;    0;      0;      0;      0;      0;      100;    0;      0;      0;      0;      0;      0; 0; 0; 1; 0; 0; 0; 0; 0]
+        [200;   0;      100;    0;      0;      0;      0;      0;      150;    0;      0;      0;      0;      0;      50;     0;      0;      0;      0;      0; 0; 0; 0; 1; 0; 0; 0; 0]
+        [600;   0;      0;      350;    0;      0;      0;      0;      0;      200;    0;      0;      0;      0;      0;      100;    0;      0;      0;      0; 0; 0; 0; 0; 1; 0; 0; 0]
+        [100;   0;      0;      0;      50;     0;      0;      0;      0;      0;      40;     0;      0;      0;      0;      0;      30;     0;      0;      0; 0; 0; 0; 0; 0; 1; 0; 0]
+        [200;   0;      0;      0;      0;      150;    0;      0;      0;      0;      0;      100;    0;      0;      0;      0;      0;      200;    0;      0; 0; 0; 0; 0; 0; 0; 1; 0]
+        [100;   0;      0;      0;      0;      0;      40;     0;      0;      0;      0;      0;      30;     0;      0;      0;      0;      0;      50;     0; 0; 0; 0; 0; 0; 0; 0; 1]
     ]
     |> List.map (List.map float)
     |> array2D
@@ -134,12 +138,12 @@ let matrix4 =
         [5;     1;      1;      1;      1;      1;      1;      0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      1; 0; 0; 0; 0; 0; 0; 0; 0] 
         [4;     0;      0;      0;      0;      0;      0;      1;      1;      1;      1;      1;      1;      0;      0;      0;      0;      0;      0;      0; 1; 0; 0; 0; 0; 0; 0; 0]
         [5;     0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      0;      1;      1;      1;      1;      1;      1;      0; 0; 1; 0; 0; 0; 0; 0; 0] 
-        [-300;  -300;    0;      0;      0;      0;      0;      -200;    0;      0;      0;      0;      0;      -100;    0;      0;      0;      0;      0;      0; 0; 0; 1; 0; 0; 0; 0; 0]
-        [-200;  0;      -100;    0;      0;      0;      0;      0;      -150;    0;      0;      0;      0;      0;      -50;     0;      0;      0;      0;      0; 0; 0; 0; 1; 0; 0; 0; 0]
-        [-600;  0;      0;      -350;    0;      0;      0;      0;      0;      -200;    0;      0;      0;      0;      0;      -100;    0;      0;      0;      0; 0; 0; 0; 0; 1; 0; 0; 0]
-        [-100;  0;      0;      0;      -50;     0;      0;      0;      0;      0;      -40;     0;      0;      0;      0;      0;      -30;     0;      0;      0; 0; 0; 0; 0; 0; 1; 0; 0]
-        [-200;  0;      0;      0;      0;      -150;    0;      0;      0;      0;      0;      -100;    0;      0;      0;      0;      0;      -200;    0;      0; 0; 0; 0; 0; 0; 0; 1; 0]
-        [-100;  0;      0;      0;      0;      0;      -40;     0;      0;      0;      0;      0;      -30;     0;      0;      0;      0;      0;      -50;     0; 0; 0; 0; 0; 0; 0; 0; 1]
+        [-300;  -300;   0;      0;      0;      0;      0;      -200;   0;      0;      0;      0;      0;      -100;   0;      0;      0;      0;      0;      0; 0; 0; 1; 0; 0; 0; 0; 0]
+        [-200;  0;      -100;   0;      0;      0;      0;      0;      -150;   0;      0;      0;      0;      0;      -50;    0;      0;      0;      0;      0; 0; 0; 0; 1; 0; 0; 0; 0]
+        [-600;  0;      0;      -350;   0;      0;      0;      0;      0;      -200;   0;      0;      0;      0;      0;      -100;   0;      0;      0;      0; 0; 0; 0; 0; 1; 0; 0; 0]
+        [-100;  0;      0;      0;      -50;    0;      0;      0;      0;      0;      -40;    0;      0;      0;      0;      0;      -30;    0;      0;      0; 0; 0; 0; 0; 0; 1; 0; 0]
+        [-200;  0;      0;      0;      0;      -150;   0;      0;      0;      0;      0;      -100;   0;      0;      0;      0;      0;      -200;   0;      0; 0; 0; 0; 0; 0; 0; 1; 0]
+        [-100;  0;      0;      0;      0;      0;      -40;    0;      0;      0;      0;      0;      -30;    0;      0;      0;      0;      0;      -50;    0; 0; 0; 0; 0; 0; 0; 0; 1]
     ]
     |> List.map (List.map float)
     |> array2D
@@ -149,18 +153,68 @@ let matrix3 =
     [
         [0;     1000;   500;    700;    400;    1200;   500;    500;    350;    0;      0;      0;      0] 
         [14;    6;      4;      5;      3;      0;      0;      0;      0;      1;      0;      0;      0] 
-        [14;    1;      1;      1;      1;      5;      6;      7;      5;      0;      1;      0;      0]
+        [14;    0;      0;      0;      0;      5;      6;      7;      5;      0;      1;      0;      0]
         [1;     1;      1;      1;      1;      0;      0;      0;      0;      0;      0;      1;      0] 
         [1;     0;      0;      0;      0;      1;      1;      1;      1;      0;      0;      0;      1]
     ]
     |> List.map (List.map float)
     |> array2D
 
+let matrix6 =
+    [
+        [0;     1000;   500;    700;    400;    1200;   500;    500;    350;    0;      0;      0;      0;      0;      0] 
+        [14;    6;      4;      5;      3;      0;      0;      0;      0;      1;      0;      0;      0;      0;      0] 
+        [14;    0;      0;      0;      0;      5;      6;      7;      5;      0;      1;      0;      0;      0;      0]
+        [1;     1;      0;      0;      0;      1;      0;      0;      0;      0;      0;      1;      0;      0;      0] 
+        [1;     0;      1;      0;      0;      0;      1;      0;      0;      0;      0;      0;      1;      0;      0]
+        [1;     0;      0;      1;      0;      0;      0;      1;      0;      0;      0;      0;      0;      1;      0]
+        [1;     0;      0;      0;      1;      0;      0;      0;      1;      0;      0;      0;      0;      0;      1]
+    ]
+    |> List.map (List.map float)
+    |> array2D
+
+let matrix8 =
+    [
+        [0;     1000;   500;    700;    400;    1200;   500;    500;    350;    0;      0;      0;      0;      0;      0;      0] 
+        [14;    6;      4;      5;      3;      0;      0;      0;      0;      1;      0;      0;      0;      0;      0;      0] 
+        [14;    0;      0;      0;      0;      5;      6;      7;      5;      0;      1;      0;      0;      0;      0;      0]
+        [1;     1;      0;      0;      0;      1;      0;      0;      0;      0;      0;      1;      0;      0;      0;      0] 
+        [1;     0;      1;      0;      0;      0;      1;      0;      0;      0;      0;      0;      1;      0;      0;      0]
+        [1;     0;      0;      1;      0;      0;      0;      1;      0;      0;      0;      0;      0;      1;      0;      0]
+        [1;     0;      0;      0;      1;      0;      0;      0;      1;      0;      0;      0;      0;      0;      1;      0]
+        [4;     1;      1;      1;      1;      1;      1;      1;      1;      0;      0;      0;      0;      0;      0;      1]
+    ]
+    |> List.map (List.map float)
+    |> array2D
+    
+
+let matrix5 =
+    [
+        [0;3;     1;     3;      2;      4;      1;     3;        0;      0;      0] 
+        [200;0;    1;      2;      0;      1;      3;      4;         1;      0;      0] 
+        [350;0;    1;      0;      3;      2;      1;      0;         0;      1;      0]
+        [400;2;     1;      1;      0;      0;      0;      0;         0;      0;      1] 
+    ]
+    |> List.map (List.map float)
+    |> array2D
+
+let matrix7 =
+    [
+        [0;-2;     -3;     0;      0;      0;    ] 
+        [40;-2;    6;      1;      0;      0;   ] 
+        [28;3;    2;      0;      1;      0;   ]
+        [14;2;     -1;      0;      0;      1;  ] 
+    ]
+    |> List.map (List.map float)
+    |> array2D
 
 
-let m, ans = solve matrix4 Max
-//let m, ans = solve matrix Max
+
+
+let m, answer = solve matrix6 Min
+//let m, answer = solve matrix7 Max
+//let m, ans = solve matrix2 Max
 
 printM m
-printfn "%A" ans
+printfn "%A" answer
 
